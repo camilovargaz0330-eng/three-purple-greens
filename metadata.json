@@ -1,0 +1,6 @@
+{
+  "name": "Three Purple Greens",
+  "description": "Prototipo interactivo premium de marca para Three Purple Greens con control de acceso por edad, catálogo interactivo de flores, extractos y tópicos, carrito de compras y agenda de eventos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
