@@ -1,0 +1,85 @@
+================================================================================
+    THREE PURPLE GREENS - COMO DESPLEGAR EN LA NUBE (30 MINUTOS)
+================================================================================
+
+Tu aplicación está lista para desplegar sin modificar NADA.
+
+PARA DESPLEGAR, SOLO NECESITAS:
+1. Una cuenta GitHub (gratis)
+2. Una cuenta Vercel (gratis)
+3. Una cuenta Railway (gratis)
+4. Una cuenta MongoDB Atlas (gratis)
+
+TODO ES GRATIS. NO NECESITAS TARJETA DE CRÉDITO.
+
+================================================================================
+RESUMEN DE PASOS
+================================================================================
+
+PASO 1: Subir código a GitHub (2 minutos)
+  → Ver: DESPLIEGUE_PASO_A_PASO.md (Sección PASO 1 y PASO 2)
+
+PASO 2: Crear MongoDB en la nube (5 minutos)
+  → Ver: DESPLIEGUE_PASO_A_PASO.md (Sección PASO 3)
+
+PASO 3: Desplegar backend en Railway (5 minutos)
+  → Ver: DESPLIEGUE_PASO_A_PASO.md (Sección PASO 4)
+
+PASO 4: Desplegar frontend en Vercel (5 minutos)
+  → Ver: DESPLIEGUE_PASO_A_PASO.md (Sección PASO 5)
+
+PASO 5: Verificar que funciona (3 minutos)
+  → Ver: DESPLIEGUE_PASO_A_PASO.md (Sección PASO 6)
+
+================================================================================
+RESULTADO FINAL
+================================================================================
+
+Después de completar todos los pasos, tendrás:
+
+✅ Tu página web en: https://three-purple-greens-omega.vercel.app
+   (URL exacta depende del nombre que le des en Vercel)
+
+✅ Accesible desde: 
+   - Computadora Windows
+   - Computadora Mac
+   - Computadora Linux
+   - Tablet
+   - Teléfono Android
+   - iPhone
+   - Cualquier navegador en cualquier dispositivo
+
+✅ Tus órdenes guardadas en: MongoDB Atlas (base de datos en la nube)
+
+✅ Tu backend procesando órdenes en: Railway
+
+================================================================================
+ARCHIVO A LEER PRIMERO
+================================================================================
+
+LEER ESTO PRIMERO: DESPLIEGUE_PASO_A_PASO.md
+
+Es una guía paso a paso muy detallada con:
+- Capturas de pantalla (en las instrucciones)
+- Explicación de cada botón
+- URLs exactas donde ir
+- Qué datos copiar
+- Qué errores podrían ocurrir y cómo solucionarlos
+
+================================================================================
+CONTACTO / SOPORTE
+================================================================================
+
+Si algo no funciona:
+1. Lee DESPLIEGUE_PASO_A_PASO.md completamente
+2. Revisa la sección "Troubleshooting"
+3. Verifica los logs en:
+   - Railway: Settings → Logs
+   - Vercel: Deployments → Logs
+   - MongoDB Atlas: Activity
+
+================================================================================
+FECHA: Julio 1, 2026
+STATUS: ✅ Listo para producción
+================================================================================
+
