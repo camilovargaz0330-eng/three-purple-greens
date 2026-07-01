@@ -2,9 +2,9 @@ import express, { Express, Request, Response } from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import mongoose from 'mongoose'
-import productRoutes from './routes/products.js'
-import orderRoutes from './routes/orders.js'
-import analyticsRoutes from './routes/analytics.js'
+import productRoutes from './routes/products'
+import orderRoutes from './routes/orders'
+import analyticsRoutes from './routes/analytics'
 
 dotenv.config()
 
