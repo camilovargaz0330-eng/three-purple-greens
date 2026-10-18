@@ -1,6 +1,7 @@
 package com.minerva.pointer
 
 import android.os.Bundle
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -27,7 +28,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -49,7 +49,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -117,6 +118,7 @@ fun PointerApp() {
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun Stage(engine: PointerEngine, modifier: Modifier = Modifier) {
     val dark = isSystemInDarkTheme()
@@ -128,13 +130,26 @@ fun Stage(engine: PointerEngine, modifier: Modifier = Modifier) {
         Canvas(
             Modifier
                 .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { engine.setTarget(it.x, it.y) },
-                        onDrag = { change, _ ->
-                            engine.setTarget(change.position.x, change.position.y)
+                // Raw MotionEvent so we can read stylus pressure and tilt,
+                // which Compose's gesture detectors do not expose.
+                .pointerInteropFilter { ev ->
+                    when (ev.actionMasked) {
+                        MotionEvent.ACTION_DOWN,
+                        MotionEvent.ACTION_MOVE,
+                        MotionEvent.ACTION_UP -> {
+                            val i = ev.actionIndex.coerceIn(0, ev.pointerCount - 1)
+                            val isStylus =
+                                ev.getToolType(i) == MotionEvent.TOOL_TYPE_STYLUS
+                            engine.hasStylus.value = isStylus
+                            // Tilt axis is radians 0..PI/2; normalize to 0..1.
+                            val tiltRad = ev.getAxisValue(MotionEvent.AXIS_TILT, i)
+                            val tilt01 = (tiltRad / (Math.PI.toFloat() / 2f)).coerceIn(0f, 1f)
+                            val pressure = ev.getPressure(i).coerceIn(0f, 1f)
+                            engine.setTarget(ev.getX(i), ev.getY(i), pressure, tilt01)
+                            true
                         }
-                    )
+                        else -> false
+                    }
                 }
         ) {
             // faint grid
@@ -160,8 +175,9 @@ fun Stage(engine: PointerEngine, modifier: Modifier = Modifier) {
                     val p1 = pts[i]
                     val frac = i.toFloat() / count
                     val a = frac * frac
-                    val w = if (mode == EffectMode.RIBBON) p1.width * frac
-                    else engine.baseWidth.value * frac
+                    // Both modes carry the point's pressure/tilt-aware width;
+                    // RIBBON keeps full body, LINE tapers toward the tail.
+                    val w = if (mode == EffectMode.RIBBON) p1.width else p1.width * frac
                     drawLine(
                         color = strokeColor.copy(alpha = 0.15f + a * 0.85f),
                         start = Offset(p0.x, p0.y),
@@ -180,15 +196,16 @@ fun Stage(engine: PointerEngine, modifier: Modifier = Modifier) {
                     val py = p.y + sin(ang) * rad * 0.4f
                     drawCircle(
                         color = strokeColor.copy(alpha = 0.1f + fr * 0.8f),
-                        radius = (engine.baseWidth.value * 0.4f * fr).coerceAtLeast(1f),
+                        radius = (p.width * 0.4f * fr).coerceAtLeast(1f),
                         center = Offset(px, py)
                     )
                 }
             }
 
-            // pen head
+            // pen head — scaled by live pressure so a hard press reads bigger
             engine.tip?.let { t ->
-                val r = (engine.baseWidth.value * 0.55f).coerceAtLeast(3f)
+                val r = (engine.baseWidth.value * (0.35f + engine.livePressure.value * 0.6f))
+                    .coerceAtLeast(3f)
                 drawCircle(strokeColor.copy(alpha = 0.95f), r, t)
                 drawCircle(
                     color = strokeColor.copy(alpha = 0.4f),
@@ -212,6 +229,16 @@ fun Stage(engine: PointerEngine, modifier: Modifier = Modifier) {
                 letterSpacing = 2.sp,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+            )
+            Spacer(Modifier.height(6.dp))
+            val p = (engine.livePressure.value * 100).toInt()
+            val tDeg = (engine.liveTilt.value * 90).toInt()
+            val src = if (engine.hasStylus.value) "S PEN" else "DEDO"
+            Text(
+                "$src · PRESIÓN $p% · INCLINACIÓN $tDeg°",
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }
@@ -250,6 +277,26 @@ fun ControlRail(engine: PointerEngine, modifier: Modifier = Modifier) {
                 SliderRow("Reacción a velocidad", engine.reaction.value, 0f, 1f) {
                     engine.reaction.value = it
                 }
+            }
+
+            Group("S PEN") {
+                SliderRow("Sensibilidad a presión", engine.pressureSensitivity.value, 0f, 1f) {
+                    engine.pressureSensitivity.value = it
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Switch(
+                        checked = engine.tiltAffectsWidth.value,
+                        onCheckedChange = { engine.tiltAffectsWidth.value = it }
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text("Inclinación ensancha el trazo", color = MaterialTheme.colorScheme.onSurface)
+                }
+                Text(
+                    "Presión e inclinación se leen del MotionEvent real del S Pen. " +
+                        "Con el dedo, la presión suele reportarse como 100% y la inclinación 0°.",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
             }
 
             Group("COLOR DEL TRAZO") {

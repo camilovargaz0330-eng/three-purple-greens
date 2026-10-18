@@ -6,8 +6,15 @@ import androidx.compose.ui.geometry.Offset
 import kotlin.math.hypot
 import kotlin.math.max
 
-/** One sample along the trail: where the pen tip was and how wide to draw it. */
-data class TrailPoint(val x: Float, val y: Float, val width: Float)
+/** One sample along the trail: tip position, draw width, and the sensor
+ *  values captured at that moment (pressure 0..1, tilt 0..1). */
+data class TrailPoint(
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val pressure: Float,
+    val tilt: Float
+)
 
 /** Visual treatments for the trail. */
 enum class EffectMode { LINE, RIBBON, ORBIT }
@@ -30,8 +37,15 @@ class PointerEngine {
     var mode = mutableStateOf(EffectMode.LINE)
     var glow = mutableStateOf(true)
     var colorIndex = mutableStateOf(0)
+    var pressureSensitivity = mutableStateOf(0.7f)
+    var tiltAffectsWidth = mutableStateOf(true)
 
     val trail = mutableStateListOf<TrailPoint>()
+
+    // Live sensor readouts, surfaced for the on-screen HUD.
+    var livePressure = mutableStateOf(0f)
+    var liveTilt = mutableStateOf(0f)
+    var hasStylus = mutableStateOf(false)
 
     private var tipX = 0f
     private var tipY = 0f
@@ -41,14 +55,24 @@ class PointerEngine {
     private var targetY = 0f
     private var engaged = false
     private var smoothedSpeed = 0f
+    private var pressure = 1f   // 0..1
+    private var tilt = 0f       // 0..1 (0 perpendicular, 1 flat)
 
     /** Last tip position, for drawing the head. Null until the first touch. */
     var tip: Offset? = null
         private set
 
-    fun setTarget(x: Float, y: Float) {
+    /**
+     * @param pressure normalized 0..1 (finger reports ~1).
+     * @param tilt normalized 0..1 from the stylus tilt axis.
+     */
+    fun setTarget(x: Float, y: Float, pressure: Float = 1f, tilt: Float = 0f) {
         targetX = x
         targetY = y
+        this.pressure = pressure.coerceIn(0f, 1f)
+        this.tilt = tilt.coerceIn(0f, 1f)
+        livePressure.value = this.pressure
+        liveTilt.value = this.tilt
         if (!engaged) {
             tipX = x; tipY = y
             engaged = true
@@ -84,9 +108,17 @@ class PointerEngine {
         smoothedSpeed += (speed - smoothedSpeed) * 0.25f
 
         val reactW = 1f + (smoothedSpeed * 0.14f - 0.5f) * reaction.value
-        val w = max(0.6f, baseWidth.value * reactW)
 
-        trail.add(TrailPoint(tipX, tipY, w))
+        // Pressure thickens the stroke, scaled by sensitivity (1.0 -> full range).
+        val s = pressureSensitivity.value
+        val pFactor = (1f - s) + s * (0.2f + pressure * 1.6f)
+
+        // Flatter tilt spreads the nib wider, like a chisel edge.
+        val tFactor = if (tiltAffectsWidth.value) 1f + tilt * 1.4f else 1f
+
+        val w = max(0.6f, baseWidth.value * reactW * pFactor * tFactor)
+
+        trail.add(TrailPoint(tipX, tipY, w, pressure, tilt))
         while (trail.size > trailLength.value) trail.removeAt(0)
 
         tip = Offset(tipX, tipY)
