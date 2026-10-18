@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="stage_light">#F3F5FA</color>
+    <color name="stage_dark">#0A0E1A</color>
+    <color name="ic_bg">#203764</color>
+</resources>
